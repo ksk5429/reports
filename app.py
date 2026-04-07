@@ -31,10 +31,10 @@ from src.analysis.traffic import (
 from src.analysis.synthesizer import synthesize_locally
 
 
-# ──────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 # KNOWN RESTAURANTS DATABASE (curated from multi-platform research)
 # This serves as the fallback when live API search is unavailable.
-# ──────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 
 def load_curated_database() -> list[Restaurant]:
     """Load curated restaurant data from multi-platform research."""
@@ -43,7 +43,7 @@ def load_curated_database() -> list[Restaurant]:
     # --- 옥소반 송파 (Oksovan) ---
     db.append(Restaurant(
         name="Oksovan Songpa",
-        name_ko="옥���반 송파",
+        name_ko="옥소반 송파",
         category="스키야키",
         subcategory="스키야키·샤브샤브 전문",
         location=Location("옥소반 송파", "서울 송파구 송파대로 201", 37.5050, 127.1120, "송파구 (석촌역)"),
@@ -84,7 +84,7 @@ def load_curated_database() -> list[Restaurant]:
     db.append(Restaurant(
         name="Motokurashi",
         name_ko="모토쿠라시",
-        category="이자��야",
+        category="이자카야",
         subcategory="고급 이자카야 (연어·사시미 중심)",
         location=Location("모토쿠라시", "서울 송파구 백제고분로 45길 25, 2층", 37.5060, 127.1070, "송파구 (석촌역/송리단길)"),
         price=PriceRange(lunch_min=0, lunch_max=0, dinner_min=40000, dinner_max=70000),
@@ -171,7 +171,7 @@ def load_curated_database() -> list[Restaurant]:
         name_ko="동경산책 송리단길점",
         category="일식",
         subcategory="일본가정식·스키야키·장어덮밥",
-        location=Location("동경산책 송리단길점", "서울 송파구 송파동 42-6", 37.5065, 127.1080, "송파구 (석촌역/송리단���)"),
+        location=Location("동경산책 송리단길점", "서울 송파구 송파동 42-6", 37.5065, 127.1080, "송파구 (석촌역/송리단길)"),
         price=PriceRange(lunch_min=15000, lunch_max=20000, dinner_min=17000, dinner_max=30000),
         ratings=[
             Rating("DiningCode", 4.2, 5.0, 60, taste=4.3, service=4.0),
@@ -208,9 +208,9 @@ def load_curated_database() -> list[Restaurant]:
     # --- 히야 (Hiya) — 문정동 ---
     db.append(Restaurant(
         name="Hiya",
-        name_ko="히���",
+        name_ko="히야",
         category="이자카야",
-        subcategory="분위기 이자카야 (안주 ���심)",
+        subcategory="분위기 이자카야 (안주 중심)",
         location=Location("히야", "서울 송파구 문정동", 37.4855, 127.1230, "송파구 (문정역)"),
         price=PriceRange(lunch_min=0, lunch_max=0, dinner_min=35000, dinner_max=60000),
         ratings=[
@@ -248,7 +248,7 @@ def load_curated_database() -> list[Restaurant]:
     # --- 오마카세 반복 (Omakase Banbok) — 석촌 ---
     db.append(Restaurant(
         name="Omakase Banbok",
-        name_ko="오마카세 ���복",
+        name_ko="오마카세 반복",
         category="일식",
         subcategory="스시 오마카세",
         location=Location("오마카세 반복", "서울 송파구 가락로 71, 2F", 37.5040, 127.1090, "송파구 (석촌역)"),
@@ -288,9 +288,9 @@ def load_curated_database() -> list[Restaurant]:
     return db
 
 
-# ──────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 # CORE SEARCH + RECOMMENDATION ENGINE
-# ──────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 
 def filter_by_radius(
     restaurants: list[Restaurant],
@@ -411,7 +411,7 @@ def run_recommendation(
         search_context = {
             "date": datetime.now().strftime("%Y-%m-%d"),
             "cuisine": cuisine_type,
-            "budget": f"1인 {budget_max:,}원 이하" if budget_max else "제한 없���",
+            "budget": f"1인 {budget_max:,}원 이하" if budget_max else "제한 없음",
             "atmosphere": "Quiet, date-friendly" if quiet else "General",
         }
         generate_report(recommendations, constraints, docx_path, search_context)
@@ -524,9 +524,9 @@ def format_comparison_html(recommendations: list[Recommendation]) -> str:
     return html
 
 
-# ──────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 # API SEARCH (live, when API keys available)
-# ────────────────────��─────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 
 async def run_live_search(query: str, location: str) -> str:
     """Run live multi-platform search."""
@@ -566,9 +566,9 @@ def live_search_sync(query: str, location: str) -> str:
         return f"Search error: {e}"
 
 
-# ───────────────���──────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 # GRADIO UI
-# ─────────────────────────────��────────────────────────────────────
+# ────────────────────────────────────────────────────────────
 
 LANDMARK_CHOICES = list(LANDMARKS.keys())
 
@@ -592,7 +592,7 @@ with gr.Blocks(
     )
 
     with gr.Tabs():
-        # ── TAB 1: Smart Recommendation ──
+        # ──────────────────────────────────────────────────────────── TAB 1: Smart Recommendation ──
         with gr.TabItem("🎯 Smart Recommendation"):
             with gr.Row():
                 with gr.Column(scale=1):
@@ -620,7 +620,7 @@ with gr.Blocks(
 
                     gr.Markdown("### Logistics")
                     user_loc = gr.Dropdown(choices=LANDMARK_CHOICES, value="개포레미안포레스트", label="🏠 Your Location")
-                    gf_loc = gr.Dropdown(choices=LANDMARK_CHOICES, value="인하대���교", label="🏫 Partner's Departure")
+                    gf_loc = gr.Dropdown(choices=LANDMARK_CHOICES, value="인하대학교", label="🏫 Partner's Departure")
                     gf_time = gr.Textbox(value="18:00", label="🕕 Partner's Departure Time")
                     rush_hour = gr.Checkbox(value=True, label="🚦 Rush hour traffic")
 
@@ -647,7 +647,7 @@ with gr.Blocks(
                 outputs=[results_md, comparison_html, docx_output],
             )
 
-        # ── TAB 2: Live Platform Search ──
+        # ──────────────────────────────────────────────────────────── TAB 2: Live Platform Search ──
         with gr.TabItem("🌐 Live Platform Search"):
             gr.Markdown(
                 """
@@ -668,7 +668,7 @@ with gr.Blocks(
                 outputs=live_results,
             )
 
-        # ── TAB 3: API Configuration ──
+        # ──────────────────────────────────────────────────────────── TAB 3: API Configuration ──
         with gr.TabItem("⚙️ API Configuration"):
             gr.Markdown(
                 """
@@ -710,7 +710,7 @@ with gr.Blocks(
             refresh_btn = gr.Button("🔄 Refresh Status")
             refresh_btn.click(fn=check_api_status, outputs=api_status)
 
-        # ── TAB 4: About ──
+        # ──────────────────────────────────────────────────────────── TAB 4: About ──
         with gr.TabItem("ℹ️ About"):
             gr.Markdown(
                 """
