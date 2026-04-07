@@ -1,0 +1,288 @@
+---
+title: "맛집 추천 리포트"
+subtitle: "복정역 반경 20분 | 2026-04-07"
+author: "Restaurant Recommendation Engine v1.0"
+date: "2026-04-07"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    self-contained: true
+    page-layout: article
+    smooth-scroll: true
+    fontsize: "1em"
+  pdf:
+    toc: true
+    number-sections: true
+    documentclass: article
+    geometry: "margin=2.5cm"
+    fontsize: "11pt"
+execute:
+  echo: false
+  warning: false
+---
+
+```{python}
+#| label: setup
+#| include: false
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(".")))
+sys.path.insert(0, ".")
+
+from app import load_curated_database, filter_by_radius
+from src.models import SearchConstraints, TravelInfo
+from src.scoring import rank_restaurants
+from src.analysis.traffic import Coordinates, estimate_drive_time_min, LANDMARKS
+
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+
+# Load and filter
+restaurants = load_curated_database()
+filtered = filter_by_radius(restaurants, "복정역", 20, rush_hour=True)
+restaurants_in_range = [r for r, _ in filtered]
+travel_times = {r.name: t for r, t in filtered}
+
+# Constraints
+constraints = SearchConstraints(
+    categories=["스키야키", "이자카야", "일식"],
+    max_price_per_person=100000,
+    date_friendly=True, quiet=True, no_wait=True,
+    parking_needed=True, party_size=2,
+)
+
+# Travel pairs
+user = LANDMARKS["개포레미안포레스트"]
+gf = LANDMARKS["인하대학교"]
+
+travel_pairs = {}
+for r in restaurants_in_range:
+    dest = Coordinates(r.location.lat, r.location.lng)
+    ta = TravelInfo("개포레미안포레스트", (user.lat, user.lng), "19:00", "car",
+                    estimate_drive_time_min(user, dest, True))
+    tb = TravelInfo("인하대학교", (gf.lat, gf.lng), "18:00", "car",
+                    estimate_drive_time_min(gf, dest, True))
+    travel_pairs[r.name] = (ta, tb)
+
+# Rank
+recs = rank_restaurants(restaurants_in_range, constraints, travel_pairs)
+```
+
+## 요약
+
+본 리포트는 **2026년 4월 7일(월) 디너 데이트**를 위한 맛집 추천입니다.
+
+::: {.callout-important}
+## 핵심 제약 조건
+- **위치**: 복정역 반경 **자차 20분 이내**
+- **음식**: 관동식 스키야키 / 고퀄리티 이자카야 / 분위기 좋은 일식
+- **분위기**: 조용하고 데이트에 적합한 환경
+- **예산**: 1인 10만원 이하
+- **대기**: 긴 웨이팅 불가
+:::
+
+### 동선 분석
+
+| 항목 | 내용 |
+|------|------|
+| 여자친구 출발 | 인하대학교(인천) 18:00, 자차 |
+| 퇴근시간 교통 | 경인고속도로→서울 1.5~2시간 |
+| 사용자 출발 | 개포레미안포레스트(강남구) |
+| 여자친구 거주 | 위례(송파구) |
+| 합류 지점 | **복정역 반경** (위례 인근, 양쪽 접근 최적) |
+| 예상 도착 | 19:30~20:00 |
+
+## 데이터 출처
+
+10개 이상 플랫폼에서 데이터를 수집하여 교차 검증하였습니다.
+
+| 플랫폼 | 수집 데이터 |
+|--------|------------|
+| DiningCode | 평점, 메뉴, 리뷰, 빅데이터 순위 |
+| CatchTable | 예약 가능 여부, 실시간 빈자리 |
+| 식신 (Siksinhot) | 사용자 평점, 큐레이션 리스트 |
+| 망고플레이트 | 큐레이션 리뷰, 사진 |
+| 네이버 블로그/지도 | 블로그 후기, 길찾기, 평점 |
+| Google Maps | 해외 리뷰, 평점 |
+| Trip.com | 여행자 리뷰, 모먼츠 |
+| Blue Ribbon Survey | 전문가 리뷰 |
+| Instagram / SNS | 실시간 분위기, 해시태그 |
+
+## TOP 3 추천
+
+```{python}
+#| label: top3-summary
+#| output: asis
+
+medals = {1: "🥇", 2: "🥈", 3: "🥉"}
+for rec in recs[:3]:
+    r = rec.restaurant
+    t = travel_times.get(r.name, "?")
+    medal = medals.get(rec.rank, "")
+    print(f"""
+### {medal} #{rec.rank}: {r.name_ko} ({r.name})
+
+| 항목 | 정보 |
+|------|------|
+| **분류** | {r.category} — {r.subcategory} |
+| **주소** | {r.location.address} |
+| **지역** | {r.location.district} |
+| **복정역 거리** | ~{t}분 |
+| **영업시간** | {r.hours} |
+| **전화** | {r.phone} |
+| **저녁 가격** | {r.price.format_range('dinner')} |
+| **주차** | {r.parking} |
+| **예약** | {r.reservation_info} |
+| **대기시간** | {r.wait_time_estimate} |
+| **분위기** | {r.atmosphere} |
+| **데이트 점수** | {r.date_friendly_score}/10 |
+| **종합 점수** | **{rec.composite_score}/10** |
+""")
+    if r.highlights:
+        print("**메뉴 하이라이트:**\n")
+        for h in r.highlights[:5]:
+            print(f"- {h}")
+        print()
+    if r.pros:
+        print("**✅ 장점:**\n")
+        for p in r.pros[:4]:
+            print(f"- {p}")
+        print()
+    if r.cons:
+        print("**⚠️ 주의사항:**\n")
+        for c in r.cons[:3]:
+            print(f"- {c}")
+        print()
+```
+
+## 비교 분석
+
+### 종합 점수 비교
+
+```{python}
+#| label: score-chart
+
+data = []
+for rec in recs[:5]:
+    r = rec.restaurant
+    data.append({
+        "맛집": r.name_ko,
+        "종합점수": rec.composite_score,
+        "데이트점수": r.date_friendly_score,
+        "복정역(분)": travel_times.get(r.name, 0),
+    })
+
+df = pd.DataFrame(data)
+
+fig = go.Figure()
+fig.add_trace(go.Bar(
+    name="종합 점수",
+    x=df["맛집"], y=df["종합점수"],
+    marker_color=["#2F5496", "#4472C4", "#5B9BD5", "#A5C8E1", "#D6E4F0"][:len(df)],
+    text=[f"{v:.1f}" for v in df["종합점수"]],
+    textposition="outside",
+))
+fig.update_layout(
+    title="종합 점수 비교 (10점 만점)",
+    yaxis_range=[0, 10],
+    template="plotly_white",
+    height=400,
+)
+fig.show()
+```
+
+### 상세 비교표
+
+```{python}
+#| label: comparison-table
+#| output: asis
+
+print("| 항목 |", " | ".join(f"#{r.rank} {r.restaurant.name_ko}" for r in recs[:3]), "|")
+print("|------|", " | ".join("------" for _ in recs[:3]), "|")
+
+rows = [
+    ("분류", lambda r: r.restaurant.category),
+    ("저녁 가격", lambda r: r.restaurant.price.format_range("dinner")),
+    ("맛 평점", lambda r: f"{r.restaurant.avg_rating * 5:.1f}/5"),
+    ("데이트 점수", lambda r: f"{r.restaurant.date_friendly_score}/10"),
+    ("소음", lambda r: r.restaurant.noise_level),
+    ("주차", lambda r: r.restaurant.parking[:25] if r.restaurant.parking else "N/A"),
+    ("예약", lambda r: r.restaurant.reservation_info[:25] if r.restaurant.reservation_info else "N/A"),
+    ("대기", lambda r: r.restaurant.wait_time_estimate),
+    ("**종합**", lambda r: f"**{r.composite_score}/10**"),
+]
+
+for label, fn in rows:
+    vals = " | ".join(fn(r) for r in recs[:3])
+    print(f"| {label} | {vals} |")
+```
+
+### 가격 대비 점수
+
+```{python}
+#| label: price-chart
+
+data2 = []
+for rec in recs[:5]:
+    r = rec.restaurant
+    data2.append({
+        "맛집": r.name_ko,
+        "저녁평균(원)": r.price.avg_dinner,
+        "종합점수": rec.composite_score,
+        "데이트점수": r.date_friendly_score,
+    })
+
+df2 = pd.DataFrame(data2)
+
+fig2 = go.Figure()
+fig2.add_trace(go.Scatter(
+    x=df2["저녁평균(원)"], y=df2["종합점수"],
+    mode="markers+text",
+    text=df2["맛집"],
+    textposition="top center",
+    marker=dict(size=df2["데이트점수"] * 5, color=df2["종합점수"],
+                colorscale="Blues", showscale=True, colorbar=dict(title="종합점수")),
+))
+fig2.update_layout(
+    title="가격 vs 종합 점수 (원 크기 = 데이트 점수)",
+    xaxis_title="저녁 평균 가격 (원)",
+    yaxis_title="종합 점수",
+    template="plotly_white",
+    height=450,
+)
+fig2.show()
+```
+
+## 분석 방법론
+
+### 종합 점수 산출 기준
+
+| 요소 | 가중치 | 설명 |
+|------|--------|------|
+| 음식 퀄리티 | 30% | 멀티 플랫폼 평균 평점 (정규화) |
+| 데이트 분위기 | 25% | 조명, 소음, 좌석 간격, 프라이빗 여부 |
+| 가성비 | 20% | 가격 대비 퀄리티 평가 |
+| 교통 편의 | 25% | 복정역 거리, 주차, 예약 용이성 |
+
+### 교통 추정 모델
+
+- 하버사인 거리 + 서울 도심 보정계수 (1.25~1.35)
+- 퇴근시간 평균 속도: 단거리(<5km) 20km/h, 장거리 15km/h
+- 출처: 실시간 Tmap/카카오내비 데이터 기반 보정
+
+## 유의사항
+
+::: {.callout-warning}
+가격, 영업시간, 예약 가능 여부는 리포트 생성 시점 데이터이며 변경될 수 있습니다.
+방문 전 반드시 맛집에 직접 확인하시기 바랍니다.
+당일 예약은 **캐치테이블** 또는 **전화**로 확인하세요.
+:::
+
+---
+
+*본 리포트는 Restaurant Recommendation Engine v1.0으로 생성되었습니다.*
+*데이터 수집: DiningCode, CatchTable, 식신, 망고플레이트, 네이버, Google, Trip.com, Instagram 등 10개+ 플랫폼*
